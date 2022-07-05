@@ -18,7 +18,6 @@ main :: Effect Unit
 main =
   runTest do
     runChapterExamples
-    {-  Move this block comment starting point to enable more tests
     suite "Exercise Group - Recursion" do
       suite "Exercise - isEven" do
         test "0 is even" do
@@ -42,6 +41,7 @@ main =
         test "-19 is odd" do
           Assert.equal false
             $ isEven (-19)
+
       suite "Exercise - countEven" do
         test "[] has none" do
           Assert.equal 0
@@ -55,6 +55,7 @@ main =
         test "[0, 1, 19, 20] has 2" do
           Assert.equal 2
             $ countEven [ 0, 1, 19, 20 ]
+
     suite "Exercise Group - Maps, Infix Operators, and Filtering" do
       suite "Exercise - squared" do
         test "Do nothing with empty array" do
@@ -63,6 +64,7 @@ main =
         test "Calculate squares" do
           Assert.equal [ 0.0, 1.0, 4.0, 9.0, 10000.0 ]
             $ squared [ 0.0, 1.0, 2.0, 3.0, 100.0 ]
+            
       suite "Exercise - keepNonNegative" do
         test "Do nothing with empty array" do
           Assert.equal []
@@ -70,6 +72,7 @@ main =
         test "Filter negative numbers" do
           Assert.equal [ 0.0, 2.0, 3.0 ]
             $ keepNonNegative [ -1.5, -1.0, 0.0, -0.1, 2.0, 3.0, -4.0 ]
+            
       suite "Exercise - <$?> infix operator for filter" do
         test "Define <$?> operator for filter" do
           Assert.equal [ 1, 1 ]
@@ -78,6 +81,8 @@ main =
         test "keepNonNegativeRewrite " do
           Assert.equal [ 0.0, 2.0, 3.0 ]
             $ keepNonNegativeRewrite [ -1.5, -1.0, 0.0, -0.1, 2.0, 3.0, -4.0 ]
+
+            
     suite "Exercise Group - Flattening, Comprehensions, Do Notation, and Guards" do
       test "Exercise - isPrime" do
         assertFalse "0 is not prime"
@@ -90,6 +95,7 @@ main =
           $ isPrime 4
         assert "997 is prime"
           $ isPrime 997
+
       suite "Exercise - cartesianProduct" do
         let
           -- Don't worry if this this testing helper function signature looks confusing.
@@ -111,6 +117,7 @@ main =
           [ [ "5", "five" ], [ "5", "six" ], [ "6", "five" ], [ "6", "six" ] ]
           [ "5", "6" ]
           [ "five", "six" ]
+          
       suite "Exercise - triples" do
         -- Sorting to allow for any ordering
         test "single element array result" do
@@ -121,6 +128,7 @@ main =
           Assert.equal (sort [ [ 3, 4, 5 ], [ 5, 12, 13 ], [ 6, 8, 10 ] ])
             $ sort
             $ triples 13
+            
       suite "Exercise - primeFactors" do
         let
           primeFactorsTest :: Int -> Array Int -> _
@@ -136,6 +144,8 @@ main =
         primeFactorsTest 6 [3, 2]
         primeFactorsTest 18 [3, 3, 2]
         primeFactorsTest 210 [ 7, 5, 3, 2 ]
+
+        {-
     suite "Exercise Group - Folds and Tail Recursion" do
       test "Exercise - allTrue" do
         assert "all elements true"
