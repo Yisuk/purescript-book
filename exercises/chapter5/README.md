@@ -197,14 +197,49 @@
     "(" <> show x <> ", " <> show y <> ")"
   ```
 
+## Newtypes
+* `newtype` keyword 사용하여 반드시 하나의 arguement만을 갖는 하나의 constructor로 정의됨.
+* Runtime에서 기저의 타입과 동일함. 따라서 runtime performance overhead가 없음.
+* Type system의 관점에서 차이를 보임 -> type safety를 위한 장치
+  i.e
+  ```js
+  newtype Volt = Volt Number
+  newtype Ohm = Ohm Number
+  newtype Amp = Amp Number
 
+  calculateCurrent :: Volt -> Ohm -> Amp
+  calculateCurrent (Volt v) (Ohm r) = Amp (v / r)
+
+  battery :: Volt
+  battery = Volt 1.5
+
+  lightbulb :: Ohm
+  lightbulb = Ohm 500.0
+
+  current :: Amp
+  current = calculateCurrent battery lightbulb
+  ```
+* newtype 자신의 이름과 constructor가 같을 필요 없다.
+  i.e
+  ```js
+  newtype Coulomb = MakeCoulomb Number
+  ```
+  `Coulomb` => type constructor of zero arguments
+  `MakeCoulomb` => data constructor
 
 ## 질문
 * ```js
   data List a = Nil | Cons a (List a)
-  => List a = Cons a ( Cons a ( Cons a ( Cons a (...))))
+  => List a = 1 + (a * List a)
+  => List a = 1 + a * (1 + a * List a) 
+            = 1 + a + a^2 * List a
+  => List a = 1 + a + a^2 * (1 + a * List a)
+            = 1 + a + a^2 + a^3 * List a
+  ...
+  => List a = 1 + a + a^2 + a^3 + ...
+  => List a = Nil | (a) | (a, a) | (a, a, a) | ...
   ```
- 이 맞나요?
+ !!
 
 ## 소감
 Alternative, Foldable, Functor와 같은 FP 용어들이 나와서 공부할 키워드들이 생겼습니다.
