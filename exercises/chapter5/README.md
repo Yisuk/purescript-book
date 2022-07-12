@@ -15,7 +15,7 @@
 * ```js
   import Data.Number as Number
   ```
-  module을 qualified nanme으로 import  
+  module을 qualified name으로 import  
   i.e `Number.max`
   length가 overllapping import 되었던 문제 해결 가능(Data.Foldable, Data.Array)
 
