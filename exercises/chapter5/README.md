@@ -9,7 +9,7 @@
   * 잠재적으로 복잡한 아이디어를 여러 경우의 수로 분리해 구현하는 방법을 통해 compact한 함수로 구현할 수 있도록 도움
 * 8월 월간 FP의 주제
   * https://adventofcode.com/2021/day/2
-* ㄲow polymorphism
+* Row polymorphism
   
 ## Project Setup
 * ```js
@@ -242,6 +242,3 @@
  !!
 
 ## 소감
-Alternative, Foldable, Functor와 같은 FP 용어들이 나와서 공부할 키워드들이 생겼습니다.
-
-가독성이 높은 코드를 작성하기 위한 표현 방법들을 익히고 있습니다.
