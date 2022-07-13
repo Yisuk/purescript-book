@@ -17,7 +17,7 @@
   ```
   module을 qualified name으로 import  
   i.e `Number.max`
-  length가 overllapping import 되었던 문제 해결 가능(Data.Foldable, Data.Array)
+  length가 overlapping import 되었던 문제 해결 가능(Data.Foldable, Data.Array)
 
 ## Simple Pattern Matching
 * Pattern matcing의 장점: 코드를 경우에 따라서 정의하고, 간단하고 명시적인 코드를 작성한다. 코드가 수학 함수와 유사한 형태를 가진다.
@@ -97,14 +97,16 @@
       last  = "Doe"
   ```
 ## Nested Patterns
-* Pattern은 임의적으로 nested 될 수 있다.
+* Pattern은 임의적으로 nested 될 수 있다.  
   i.e
   ```js
-  sortPair :: Array Int -> Array Int
-  sortPair arr@[x, y]
-  | x <= y = arr
-  | otherwise = [y, x]
-  sortPair arr = arr
+  type Address = { street :: String, city :: String }
+
+  type Person = { name :: String, address :: Address }
+
+  livesInLA :: Person -> Boolean
+  livesInLA { address: { city: "Los Angeles" } } = true
+  livesInLA _ = false
   ```
 
 ## Named Patterns
