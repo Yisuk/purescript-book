@@ -5,7 +5,7 @@
   * Purescript의 타입 시스템을 이용한 강력한 추상화 도구
   * (읽기 전)ReScript의 module functor와 비슷한 걸까?
   * (읽은 후)
-  * OOP의 `class`와 완전히 다른 의미임. OOP의 `interfacce`와 비슷한 개념이다.
+  * OOP의 `class`와 완전히 다른 의미임. OOP의 `interface`와 비슷한 개념이다.
   
 ## Project Setup
 * Dependencies
@@ -401,7 +401,7 @@ i.e
   * `Semigroup`는 `Monoid`의 superclass
 * subclass의 법칙이 superclass를 언급하거나 "is-a" 관계가 성립하는 경우가 일반적이다.  
   i.e every member of the subclass is a member of the superclass as well.
-  
+
 ## A Type Class for Hashes
 * 
 ## 질문
