@@ -205,6 +205,7 @@ i.e n = 3
 
 ## 질문
 * This raises a question: if we can use Applicative to embed PureScript functions and values into this new language, then how is the new language any larger? The answer depends on the functor f. If we can find expressions of type f a which cannot be expressed as pure x for some x, then that expression represents a term which only exists in the larger language.의 의미가 잘 이해되지 않습니다.
+  * functor룰 이용해서 표시할 수 없는 값이면 language가 확장되었다는 의미이다 
   
 ## 소감
 * Applicative는 map을 currying 함수로 일반화하여 side-effect로부터 함수를 분리하여 적용하는 방식 처럼 느껴짐
