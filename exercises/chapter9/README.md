@@ -126,7 +126,15 @@
   In Affjax.Node 
   get :: forall a. ResponseFormat a -> URL -> Aff (Either Error (Response a))
   -}
-  ``` 
+  ```
+  * Answer
+    ```haskell
+    case result of
+      Left err -> "GET /api response failed to decode: " <> AN.printError err
+      Right response -> response.body
+    ```
+    만 생각해보면 error인 경우 string이기 때문에 pure를 사용한다.  
+    haskell에서 return을 이용해 pure를 표현한다.
 
 
 ## 소감
