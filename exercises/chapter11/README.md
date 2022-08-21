@@ -120,13 +120,123 @@
 * `State`, `Reader`, `Write` monad는 모두 monad transformer이다. 각각 monad transformer `StateT`, `ReaderT`, `WriterT`와 대응된다.
 * Monad transformer
   * Monad - 적절한 handler(`runState`, `runReader`, `runWriter` .etc)를 이용해 PureScript에서 해석될 수 있는 side effect와 함께 PureScrip code를 확장(augment)한다. 단 하나의 side effect만 다룰 수 있다.
-  * 
+  * Monad transformer - Type 뿐만 아니라다른 type constructor에 의해 parameterized 되는 type constructor. 하나의 monad를 입력 받아 고유의 side-effect를 더한 다른 monad로 변환한다.
+    * i.e) `State` monad의 monad transformer - `StateT`
+      ```haskell
+      > import Control.Monad.State.Trans
+      > :kind StateT
+      Type -> (Type -> Type) -> Type -> Type
+      ```
+      `String` state type을 사용하는 경우를 가정하면,
+      ```haskell
+      > :kind StateT String
+      (Type -> Type) -> Type -> Type
+      ```
+      다음 인자는 kind `Type -> Type`을 갖는 type constructor 이다. 이는 `StateT`를 통해 효과를 더하고자 하는 기저(underlying) monad이다. 예시를 위해 `Either String` monad를 가정하자.
+      ```haskell
+      :kind StateT String (Either String)
+      Type -> Type
+      ```
+      남은 표현은 type constructor이다. 마지막 인자는 return type을 의미한다. `Number`를 가정하면 표현은 최종적으로 Type으로 나타낼 수 있다.
+      ```haskell
+      :kind StateT String (Either String) Number
+      Type
+      ```
+      monad `StateT String (Either String)`은 error message를 동반한 실패 가능하며 mutable state를 사용할 수 있는 계산을 의미한다.
+* `MonadTrans` type class - `StateT String` monad 외부에서 `get`, `put`과 같은 action을 사용할 수 있지만 monad(`Either String`)으로 감싸진 효과를 사용하기 위해서는 action들을 monad transformer로 "lift" 해야 한다. 이 때 `MonadTrans`를 사용할 수 있다.
+  ```haskell
+  class MonadTrans t where
+    lift :: forall m a. Monad m => m a -> t m a
+    <!-- in exmaple, 
+      t :: State String
+      m :: Either String
+    -->
+  ```
+  `lift`는 underlying monad `m`의 계산을 입력 받아 wrapped monad `t m`으로 "lift" 한다.
+* Note) Monad transformer의 power - 다양한 문제에 각각에 맞는 monad를 만들고, 필요한 side-effects를 골라 작은 단위의 함수를 작성 후, do notation과 applicative combinator의 표현력을 이용해 큰 계산을 할 수 있다.
+
+## The ExceptT Monad Transformer
+* `ExceptT e` monad transformer - `Either e` monad에 대응되는 transformer.
+  ```haskell
+  class MonadError e m where
+    throwError :: forall a. e -> m a
+    catchError :: forall a. m a -> (e -> m a) -> m a
+
+  instance monadErrorExceptT :: Monad m => MonadError e (ExceptT e m)
+
+  runExceptT :: forall e m a. ExceptT e m a -> m (Either e a)
+  ```
+  * `MonadError` class는 `e` type error를 지원하는 monad를 capture한다. 또한 `ExceptT e` monad transformer를 위한 instance를 제공한다.
+  * `throwError` - 실패를 알리기 위해 사용.(= `Left` in the `Either e` monad)
+  * `catchError` - `throwError` 이후 연산을 계속하기 위해 사용.
+  * `runExceptT` handler - `ExceptT e m a` type의 계산을 실행하기 위해 사용.
+* i.e) `Writer` monad를 `ExceptT`를 이용해 wrapping
+  ```haskell
+  import Control.Monad.Except
+  import Control.Monad.Writer
+
+  writerAndExceptT :: ExceptT String (Writer (Array String)) String
+  writerAndExceptT = do
+    lift $ tell ["Before the error"]
+    _ <- throwError "Error!"
+    lift $ tell ["After the error"]
+    pure "Return value"
+
+  > runWriter $ runExceptT writerAndExceptT
+  Tuple (Left "Error!") ["Before the error"]
+  ```
+
+## Monad Transformer Stacks
+* Monad transformer는 기존 monad 위에 새로운 monad를 만들기 위해 사용된다. Monad transfomer `t1`과 monad `m`이 있을 때, `t1 m` 역시 monad 이다. 마찬가지로 monad `t2 (t1 m)`을 만들 수 있다. 이런 방식으로 구성 요소들이 제공하는 side-effect들을 다루는 monad transformer stack을 만들 수 있다.
+* 실무에서의 underlying monad `m`
+  * `Effect` monad - native side effect가 요구 조건인 경우
+  * `Identity` monad - 새로운 side effect를 더하지 않고 monad transformer의 effect만 제공한다. 실제로 `State`, `Reader`, `Writer` monad는 `StateT`, `ReaderT`, `WriterT`를 `Identity`에 transform하여 구현됨.
+* i.e) `StateT`, `WriterT`, `ExceptT` with `Identity` monad - mutable state, log 합산, pure error에 대한 side effect 제공.
+  ```haskell
+  type Errors = Array String
+
+  type Log = Array String
+
+  type Parser = StateT String (WriterT Log (ExceptT Errors Identity))
+
+  split :: Parser String
+  split = do
+    s <- get
+    lift $ tell ["The state is " <> s]
+    case s of
+      "" -> lift $ lift $ throwError ["Empty string"]
+      _ -> do
+        put (drop 1 s)
+        pure (take 1 s)
+  ```
+  * Note) Monad transformer stack 순서대로 side effect를 제거해야 한다.  
+    1. `runStateT` - `StateT` 제거
+    2. `runWriterT` - `WriterT` 제거
+    3. `runExceptT` - `ExceptT` 제거
+    4. `unwrap` - `Identity` 제거
+    ```haskell
+    > runParser p s = unwrap $ runExceptT $ runWriterT $ runStateT p s
+    
+    > runParser split "test"
+    (Right (Tuple (Tuple "t" "est") ["The state is test"]))
+      
+    > runParser ((<>) <$> split <*> split) "test"
+      (Right (Tuple (Tuple "te" "st") ["The state is test", "The state is est"]))
+    ```
+    `ExpcetT`에 의해 제공된 side-effect들이 `WriterT`에 의해 제공된 side-effect들과 상호작용하는 방식 때무에 empty state로 인한 실패는 log가 출력되지 않는다.  
+    이는 monad transformer stack의 합성 순서를 바꿔서 해결 할 수 있다. `ExceptT`를 stack의 최상단으로 옮기면 log는 모든 message들을 포함하게 된다.
+* 이러한 방식든 `lift` 함수를 여러번 사용해야 한다는 단점이 있다. 하지만 type class 추론이 제공하는 자동 code 생성이 대부분의 "heavy lifting"을 제공한다.
+
+
+
+
 
 
 
 
 ## 질문
-* 
+*   MonadTrans를 통해 lift하는 이유는 do notation에서는 하나의 monad만 사용가능하기 때문이 아닐까요?
+
 
 ## 소감
 * 
