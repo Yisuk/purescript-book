@@ -227,6 +227,120 @@
     이는 monad transformer stack의 합성 순서를 바꿔서 해결 할 수 있다. `ExceptT`를 stack의 최상단으로 옮기면 log는 모든 message들을 포함하게 된다.
 * 이러한 방식든 `lift` 함수를 여러번 사용해야 한다는 단점이 있다. 하지만 type class 추론이 제공하는 자동 code 생성이 대부분의 "heavy lifting"을 제공한다.
 
+## Type Classes to the Rescue!
+* `Control.Monad.State.Class` module의 `State` monad type은 아래처럼 일반적인 형태이다.
+  ```haskell
+  get    :: forall m s. MonadState s m =>             m s
+  put    :: forall m s. MonadState s m => s        -> m Unit
+  modify :: forall m s. MonadState s m => (s -> s) -> m Unit
+  ```
+* `Control.Monad.State.Class` module에 정의된 `MonadState`(multi-parameter) type class는 pure mutable state를 지원하는 monad를 추상화 할 수 있도록 도와준다.
+* `State s` type constructor는 `MonadState s` type class의 instance 중 하나일 뿐이다.
+* 특히 `WriterT`, `ReaderT`, `ExpertT` monad transformer들에 대한 `MonadState` instance가 `transformer` package에 존재한다. 또한 `StateT`가 monad transformer stack에 존재하는 이상, stack에서 `StateT`위에 존재하는 것들은 `MonadState`의 instance이다. 따라서 `get`, `put`, `modify`를 `lift`하지 않고 곧바로 사용할 수 있다.
+* 이는 `WriterT`, `ReaderT`, `ExpertT` transformer들에 대해서도 적용된다. `transformers`는 주요 transformer들에 대한 type class를 정의하며 이를 통해 monad에 대한 추상화를 할 수 있다.
+* 위에서 예시로 제시한 `split` 함수의 경우 monad stack이 `MonadState`, `MonadWriter`, `MonadError` type class의 instance로 되어 있다. 따라서 `lift`를 사용하지 않고 `get`, `put`, `tell`, `throwError`를 사용할 수 있다.
+  ```haskell
+  split :: Parser String
+  split = do
+    s <- get
+    tell ["The state is " <> show s]
+    case s of
+      "" -> throwError ["Empty string"]
+      _ -> do
+        put (drop 1 s)
+        pure (take 1 s)
+  ```
+
+## Alternatives
+* `Alternative` type class - 실패할 수 있는 계산에 대한 추상화 도구
+  ```haskell
+  class Functor f <= Alt f where
+    alt :: forall a. f a -> f a -> f a
+
+  class Alt f <= Plus f where
+    empty :: forall a. f a
+
+  class (Applicative f, Plus f) <= Alternative f
+  ```
+  * `empty` - 실패한 계산에 대한 prototype 제공
+  * `alt` (alias: `<|>`) - error인 경우에 대체 연산(alternative computation)으로 fall back 할 수 있는 능력
+* `Data.Array` module은 `Alternative` type class의 생성자와 함께 사용하기 유용한 함수를 제공한다.
+  ```haskell
+  many :: forall f a. Alternative f => Lazy (f (Array a)) => f a -> f (Array a)
+  some :: forall f a. Alternative f => Lazy (f (Array a)) => f a -> f (Array a)
+  ```
+  * `many` - 반복적인 계산을 위하여 `Alternative` type class를 사용한다. (zero-or-more times)
+  * `some` - 반복적인 계산을 위하여 `Alternative` type class를 사용하지만 최소 한 번 이상의 성공을 요구한다.
+* `Parser` monad transformer stack에는 `ExceptT`에 의한 `Alternative` instance가 존재한다. 이는 `Monoid` instance를 이용해 서로 다른 error들을 합성할 수 있도록 지원한다. 따라서 `many`와 `some`을 사용할 수 있다.
+  ```haskell
+  > import Data.Array (many)
+
+  > runParser (many split) "test"
+  (Right (Tuple (Tuple ["t", "e", "s", "t"] "")
+                [ "The state is \"test\""
+                , "The state is \"est\""
+                , "The state is \"st\""
+                , "The state is \"t\""
+                ]))
+  ```
+## Monad Comprehensions
+* `MonadPlus`
+  * `Control.MonadPlus`에 정의된 `Alternative` type class의 subclass
+  * Monad 이면서 `Alternative`의 instance인 type constructor를 표현한다.
+  * ```haskell
+    class (Monad m, Alternative m) <= MonadPlus m
+    ```
+* `guard` - Array comprehension에서 다뤘던 `guard` 함수는 더 일반적으로 `MonadPlus`의 instance인 임의의 monad에 대해 사용할 수 있다.
+  ```haskell
+  guard :: forall m. Alternative m => Boolean -> m Unit
+  ```
+  
+## Backtracking
+* `<|>` operator - 계산에서 실패한 경우 backtrack하기 위하여 사용한다.
+* i.e) upper, lower -> upperOrLower 함수는 첫 번째 문자의 대/소문자에 따라 최대로 연속된 대/소문자열을 반환한다.
+  ```haskell
+  upper :: Parser String
+  upper = do
+    s <- split
+    guard $ toUpper s == s
+    pure s
+    
+  lower :: Parser String
+  lower = do
+    s <- split
+    guard $ toLower s == s
+    pure s
+
+  > upperOrLower = some upper <|> some lower
+  > runParser upperOrLower "abcDEF"
+  (Right (Tuple (Tuple ["a","b","c"] ("DEF"))
+                [ "The state is \"abcDEF\""
+                , "The state is \"bcDEF\""
+                , "The state is \"cDEF\""
+                ]))
+  ```
+  `many`도 사용 가능하다.
+
+## The RWS Monad
+* `RWS` monad(reader-writer-state monad)
+  * `Reader`, `Writer`, `State` monad 조합은 너무나 일반적이기 때문에 하나의 monad transformd으로 구현하여 사용한다.
+* ```haskell
+    type RWS r w s = RWST r w s Identity
+    ```
+  * `r` - 전역 설정 type
+  * `w` - log를 쌓기 위해 사용할 monoid
+  * `s` - Mutable state type
+  
+## Conclusion
+* Monad transformer를 이용해 명령적 방식으로 안전한 코드를 작성할 수 있다.
+* Type class를 이용해 monad가 제공하는 action들을 추상화 하고 코드를 재사용 할 수 있다.
+* Monad transformer는 higher-kinded polymorphism이나 multi-parameter type class와 같은 advanced type system의 기능을 이용해 expressive code를 작성할 수 있다는 훌륭한 예시이다.
+
+
+
+
+
+
 
 
 
@@ -235,8 +349,7 @@
 
 
 ## 질문
-*   MonadTrans를 통해 lift하는 이유는 do notation에서는 하나의 monad만 사용가능하기 때문이 아닐까요?
-
+* 
 
 ## 소감
 * 
