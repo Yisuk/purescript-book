@@ -332,7 +332,8 @@
   * `s` - Mutable state type
   
 ## Conclusion
-* Monad transformer를 이용해 명령적 방식으로 안전한 코드를 작성할 수 있다.
+* Monad transformer를 이용해 명령적 "방식"(style)으로 안전한 코드를 작성할 수 있다.
+  * Continuation passing style을 direct style로 변환할 수 있다.
 * Type class를 이용해 monad가 제공하는 action들을 추상화 하고 코드를 재사용 할 수 있다.
 * Monad transformer는 higher-kinded polymorphism이나 multi-parameter type class와 같은 advanced type system의 기능을 이용해 expressive code를 작성할 수 있다는 훌륭한 예시이다.
 
